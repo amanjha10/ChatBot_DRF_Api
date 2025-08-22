@@ -2,6 +2,7 @@ from rest_framework import status
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework.permissions import AllowAny
 from rest_framework.response import Response
+from rest_framework.pagination import PageNumberPagination
 from django.db import transaction
 from .models import User, Plan, UserPlanAssignment
 from .serializers import (
@@ -10,6 +11,25 @@ from .serializers import (
     PlanSerializer, PlanCreateSerializer, UserPlanAssignmentSerializer
 )
 from .permissions import IsSuperAdmin
+
+
+class AdminPagination(PageNumberPagination):
+    """Custom pagination class for admin list"""
+    page_size = 10
+    page_size_query_param = 'page_size'
+    max_page_size = 100
+    
+    def get_paginated_response(self, data):
+        return Response({
+            'count': self.page.paginator.count,
+            'next': self.get_next_link(),
+            'previous': self.get_previous_link(),
+            'total_pages': self.page.paginator.num_pages,
+            'current_page': self.page.number,
+            'page_size': len(data),  # Actual number of items on this page
+            'requested_page_size': self.get_page_size(self.request),  # What was requested
+            'results': data
+        })
 
 
 @api_view(['POST'])
@@ -90,23 +110,40 @@ def profile_view(request):
 @permission_classes([IsSuperAdmin])
 def list_admins_view(request):
     """
-    Get list of all created admin users with complete information.
+    Get list of all created admin users with complete information and pagination support.
     GET /api/auth/list-admins/
     GET /api/auth/list-admins/?admin_id=2  (for specific admin)
+    GET /api/auth/list-admins/?page=2&page_size=5&search=tesla&ordering=name
 
     Query Parameters:
     - admin_id (optional): Filter to get specific admin by ID
+    - page (optional): Page number (default: 1)
+    - page_size (optional): Number of items per page (default: 10, max: 100)
+    - search (optional): Search by name, email, or company_id
+    - ordering (optional): Order by field (default: -date_joined)
+      - Available fields: name, email, company_id, date_joined
+      - Use '-' prefix for descending order (e.g., -date_joined)
 
     Returns:
-    - Without admin_id: List of all admin users
     - With admin_id: Single admin object (not in array)
+    - Without admin_id: Paginated list of all admin users
 
     Examples:
-    GET /api/auth/list-admins/
-    Returns: [{"id": 1, "name": "Admin 1"}, {"id": 2, "name": "Admin 2"}]
-
     GET /api/auth/list-admins/?admin_id=2
     Returns: {"id": 2, "name": "Admin 2", "email": "admin2@example.com", ...}
+
+    GET /api/auth/list-admins/
+    GET /api/auth/list-admins/?page=2&page_size=5
+    GET /api/auth/list-admins/?search=tesla&ordering=name
+    Returns: {
+        "count": 25,
+        "next": "http://127.0.0.1:8000/api/auth/list-admins/?page=3",
+        "previous": "http://127.0.0.1:8000/api/auth/list-admins/?page=1",
+        "total_pages": 3,
+        "current_page": 2,
+        "page_size": 10,
+        "results": [...]
+    }
     """
     admin_id = request.GET.get('admin_id')
     
@@ -122,9 +159,40 @@ def list_admins_view(request):
         except User.DoesNotExist:
             return Response({'error': 'Admin not found with the given ID.'}, status=status.HTTP_404_NOT_FOUND)
     else:
-        # Return all admins
-        admins = User.objects.filter(role=User.Role.ADMIN).order_by('-date_joined')
-        serializer = AdminListSerializer(admins, many=True)
+        # Return paginated list of all admins with search and ordering
+        # Get query parameters
+        search = request.GET.get('search', '')
+        ordering = request.GET.get('ordering', '-date_joined')
+        
+        # Base queryset - all admin users
+        queryset = User.objects.filter(role=User.Role.ADMIN)
+        
+        # Apply search filter if provided
+        if search:
+            from django.db.models import Q
+            queryset = queryset.filter(
+                Q(name__icontains=search) |
+                Q(email__icontains=search) |
+                Q(company_id__icontains=search)
+            )
+        
+        # Apply ordering
+        valid_ordering_fields = ['name', 'email', 'company_id', 'date_joined', '-name', '-email', '-company_id', '-date_joined']
+        if ordering in valid_ordering_fields:
+            queryset = queryset.order_by(ordering)
+        else:
+            queryset = queryset.order_by('-date_joined')  # Default ordering
+        
+        # Apply pagination
+        paginator = AdminPagination()
+        page = paginator.paginate_queryset(queryset, request)
+        
+        if page is not None:
+            serializer = AdminListSerializer(page, many=True)
+            return paginator.get_paginated_response(serializer.data)
+        
+        # Fallback if pagination fails
+        serializer = AdminListSerializer(queryset, many=True)
         return Response(serializer.data, status=status.HTTP_200_OK)
 
 

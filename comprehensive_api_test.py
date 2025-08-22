@@ -249,6 +249,27 @@ class APITester:
             self.log_test("List Admins", False, f"Exception: {str(e)}")
             return False
 
+    def test_list_admins_paginated(self):
+        """Test paginated admin listing"""
+        if not self.token:
+            self.log_test("List Admins Paginated", False, "No token available")
+            return False
+            
+        try:
+            headers = {'Authorization': f'Bearer {self.token}'}
+            response = requests.get(f"{AUTH_BASE}/list-admins-paginated/?page_size=5", headers=headers)
+            
+            if response.status_code == 200:
+                data = response.json()
+                self.log_test("List Admins Paginated", True, f"Found {data.get('count')} admins, Page {data.get('current_page')}/{data.get('total_pages')}")
+                return True
+            else:
+                self.log_test("List Admins Paginated", False, f"Status: {response.status_code}", response.json())
+                return False
+        except Exception as e:
+            self.log_test("List Admins Paginated", False, f"Exception: {str(e)}")
+            return False
+
     def test_create_agent(self):
         """Test agent creation"""
         if not self.token:
@@ -397,6 +418,8 @@ class APITester:
         self.test_list_plans()
         self.test_create_admin()
         self.test_list_admins()
+        self.test_list_admins_paginated()
+        self.test_list_admins_paginated()
 
         return True
 
