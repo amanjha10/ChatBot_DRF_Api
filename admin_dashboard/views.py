@@ -36,13 +36,18 @@ def create_agent_view(request):
     Create Agent from Admin Dashboard.
     POST /api/admin-dashboard/create-agent/
 
-    Expected form data:
+    Expected form data (frontend sends only these fields):
     {
         "name": "John Doe",
         "phone": "1234567890",
         "email": "john@example.com",
         "specialization": "Customer Support"
     }
+
+    Note: 
+    - company_id is automatically extracted from admin's JWT token
+    - Admins can only create agents for their own company
+    - SuperAdmins can create agents but need a valid company_id
 
     Returns:
     {
@@ -54,10 +59,17 @@ def create_agent_view(request):
             "email": "john@example.com",
             "phone": "1234567890",
             "specialization": "Customer Support",
+            "company_id": "COM001",
             "status": "OFFLINE"
         }
     }
     """
+    # Validate that admin has company_id
+    if not request.user.company_id:
+        return Response({
+            'error': 'Admin user must have a company_id to create agents. Please contact SuperAdmin.'
+        }, status=status.HTTP_400_BAD_REQUEST)
+    
     serializer = AgentCreateSerializer(data=request.data, context={'request': request})
     if serializer.is_valid():
         with transaction.atomic():
@@ -87,17 +99,23 @@ def list_agents_view(request):
             "email": "john@example.com",
             "phone": "1234567890",
             "specialization": "Customer Support",
+            "company_id": "COM001",
             "status": "AVAILABLE",
             "formatted_last_active": "21/08/2025 14:30",
             "is_active": true
         }
     ]
     """
-    # Filter agents created by current admin (or all if SuperAdmin)
+    # Filter agents based on user role and company_id
     if request.user.role == User.Role.SUPERADMIN:
+        # SuperAdmin can see all agents
         agents = Agent.objects.filter(is_active=True).order_by('-created_at')
     else:
-        agents = Agent.objects.filter(created_by=request.user, is_active=True).order_by('-created_at')
+        # Admin can only see agents from their company
+        agents = Agent.objects.filter(
+            company_id=request.user.company_id, 
+            is_active=True
+        ).order_by('-created_at')
 
     serializer = AgentListSerializer(agents, many=True, context={'queryset': agents})
     return Response(serializer.data, status=status.HTTP_200_OK)
@@ -122,13 +140,13 @@ def update_agent_view(request, agent_id):
     Note: All fields are optional. Only provided fields will be updated.
     """
     try:
-        # Check if agent belongs to current admin (or allow if SuperAdmin)
+        # Check if agent belongs to current admin's company (or allow if SuperAdmin)
         if request.user.role == User.Role.SUPERADMIN:
             agent = Agent.objects.get(id=agent_id)
         else:
-            agent = Agent.objects.get(id=agent_id, created_by=request.user)
+            agent = Agent.objects.get(id=agent_id, company_id=request.user.company_id)
     except Agent.DoesNotExist:
-        return Response({'error': 'Agent not found'}, status=status.HTTP_404_NOT_FOUND)
+        return Response({'error': 'Agent not found or does not belong to your company'}, status=status.HTTP_404_NOT_FOUND)
 
     serializer = AgentUpdateSerializer(agent, data=request.data, partial=True)
     if serializer.is_valid():
@@ -437,7 +455,7 @@ def agent_sessions_view(request):
 
     # Filter by admin's agents if not SuperAdmin
     if request.user.role != User.Role.SUPERADMIN:
-        sessions = sessions.filter(agent__created_by=request.user)
+        sessions = sessions.filter(agent__company_id=request.user.company_id)
 
     serializer = AgentSessionSerializer(sessions, many=True)
     return Response(serializer.data, status=status.HTTP_200_OK)

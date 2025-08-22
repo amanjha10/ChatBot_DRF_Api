@@ -1,0 +1,460 @@
+{
+	"info": {
+		"_postman_id": "agent-creation-api-test",
+		"name": "Agent Creation API - Company ID Test",
+		"description": "Test suite for agent creation with automatic company_id extraction from JWT token",
+		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+	},
+	"item": [
+		{
+			"name": "1. Admin Login",
+			"event": [
+				{
+					"listen": "test",
+					"script": {
+						"exec": [
+							"// Save token for other requests",
+							"if (pm.response.code === 200) {",
+							"    const response = pm.response.json();",
+							"    pm.collectionVariables.set(\"admin_token\", response.access);",
+							"    pm.collectionVariables.set(\"admin_company_id\", response.user.company_id);",
+							"    pm.test(\"Login successful\", function () {",
+							"        pm.expect(response.user).to.have.property(\"company_id\");",
+							"        pm.expect(response.user.role).to.eql(\"ADMIN\");",
+							"    });",
+							"    console.log(\"Admin Company ID:\", response.user.company_id);",
+							"}"
+						],
+						"type": "text/javascript"
+					}
+				}
+			],
+			"request": {
+				"method": "POST",
+				"header": [
+					{
+						"key": "Content-Type",
+						"value": "application/json"
+					}
+				],
+				"body": {
+					"mode": "raw",
+					"raw": "{\n    \"username\": \"admin_unique_test_142116@tesla.com\",\n    \"password\": \"qiL16dou\"\n}"
+				},
+				"url": {
+					"raw": "{{base_url}}/api/auth/login/",
+					"host": [
+						"{{base_url}}"
+					],
+					"path": [
+						"api",
+						"auth",
+						"login",
+						""
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "2. Create Agent (Main Test)",
+			"event": [
+				{
+					"listen": "test",
+					"script": {
+						"exec": [
+							"// Verify agent creation with company_id",
+							"if (pm.response.code === 201) {",
+							"    const response = pm.response.json();",
+							"    const expectedCompanyId = pm.collectionVariables.get(\"admin_company_id\");",
+							"    ",
+							"    pm.test(\"Agent created successfully\", function () {",
+							"        pm.expect(response).to.have.property(\"email\");",
+							"        pm.expect(response).to.have.property(\"password\");",
+							"        pm.expect(response).to.have.property(\"agent\");",
+							"    });",
+							"    ",
+							"    pm.test(\"Company ID set automatically\", function () {",
+							"        pm.expect(response.agent).to.have.property(\"company_id\");",
+							"        pm.expect(response.agent.company_id).to.eql(expectedCompanyId);",
+							"    });",
+							"    ",
+							"    pm.test(\"Agent has correct default values\", function () {",
+							"        pm.expect(response.agent.status).to.eql(\"OFFLINE\");",
+							"        pm.expect(response.agent.is_first_login).to.eql(true);",
+							"        pm.expect(response.agent.is_active).to.eql(true);",
+							"    });",
+							"    ",
+							"    // Save agent ID for other tests",
+							"    pm.collectionVariables.set(\"created_agent_id\", response.agent.id);",
+							"    console.log(\"Created Agent ID:\", response.agent.id);",
+							"    console.log(\"Agent Company ID:\", response.agent.company_id);",
+							"}"
+						],
+						"type": "text/javascript"
+					}
+				}
+			],
+			"request": {
+				"method": "POST",
+				"header": [
+					{
+						"key": "Authorization",
+						"value": "Bearer {{admin_token}}"
+					},
+					{
+						"key": "Content-Type",
+						"value": "application/json"
+					}
+				],
+				"body": {
+					"mode": "raw",
+					"raw": "{\n    \"name\": \"Test Agent Postman\",\n    \"phone\": \"1234567890\",\n    \"email\": \"test.agent.postman@company.com\",\n    \"specialization\": \"Customer Support\"\n}"
+				},
+				"url": {
+					"raw": "{{base_url}}/api/admin-dashboard/create-agent/",
+					"host": [
+						"{{base_url}}"
+					],
+					"path": [
+						"api",
+						"admin-dashboard",
+						"create-agent",
+						""
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "3. List Agents (Verify Creation)",
+			"event": [
+				{
+					"listen": "test",
+					"script": {
+						"exec": [
+							"// Verify agent appears in list",
+							"if (pm.response.code === 200) {",
+							"    const agents = pm.response.json();",
+							"    const createdAgentId = pm.collectionVariables.get(\"created_agent_id\");",
+							"    const expectedCompanyId = pm.collectionVariables.get(\"admin_company_id\");",
+							"    ",
+							"    pm.test(\"Agents list returned\", function () {",
+							"        pm.expect(agents).to.be.an('array');",
+							"    });",
+							"    ",
+							"    if (createdAgentId) {",
+							"        const createdAgent = agents.find(agent => agent.id == createdAgentId);",
+							"        ",
+							"        pm.test(\"Created agent appears in list\", function () {",
+							"            pm.expect(createdAgent).to.not.be.undefined;",
+							"        });",
+							"        ",
+							"        if (createdAgent) {",
+							"            pm.test(\"Agent has correct company_id in list\", function () {",
+							"                pm.expect(createdAgent.company_id).to.eql(expectedCompanyId);",
+							"            });",
+							"        }",
+							"    }",
+							"    ",
+							"    // Verify all agents belong to admin's company",
+							"    pm.test(\"All agents belong to admin's company\", function () {",
+							"        agents.forEach(agent => {",
+							"            if (agent.company_id) {",
+							"                pm.expect(agent.company_id).to.eql(expectedCompanyId);",
+							"            }",
+							"        });",
+							"    });",
+							"    ",
+							"    console.log(\"Total agents for this admin:\", agents.length);",
+							"}"
+						],
+						"type": "text/javascript"
+					}
+				}
+			],
+			"request": {
+				"method": "GET",
+				"header": [
+					{
+						"key": "Authorization",
+						"value": "Bearer {{admin_token}}"
+					}
+				],
+				"url": {
+					"raw": "{{base_url}}/api/admin-dashboard/list-agents/",
+					"host": [
+						"{{base_url}}"
+					],
+					"path": [
+						"api",
+						"admin-dashboard",
+						"list-agents",
+						""
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "4. Test Error - Duplicate Email",
+			"event": [
+				{
+					"listen": "test",
+					"script": {
+						"exec": [
+							"// Verify duplicate email error",
+							"pm.test(\"Duplicate email rejected\", function () {",
+							"    pm.expect(pm.response.code).to.eql(400);",
+							"});",
+							"",
+							"if (pm.response.code === 400) {",
+							"    const response = pm.response.json();",
+							"    pm.test(\"Email validation error returned\", function () {",
+							"        pm.expect(response).to.have.property(\"email\");",
+							"    });",
+							"}"
+						],
+						"type": "text/javascript"
+					}
+				}
+			],
+			"request": {
+				"method": "POST",
+				"header": [
+					{
+						"key": "Authorization",
+						"value": "Bearer {{admin_token}}"
+					},
+					{
+						"key": "Content-Type",
+						"value": "application/json"
+					}
+				],
+				"body": {
+					"mode": "raw",
+					"raw": "{\n    \"name\": \"Another Test Agent\",\n    \"phone\": \"9876543210\",\n    \"email\": \"test.agent.postman@company.com\",\n    \"specialization\": \"Technical Support\"\n}"
+				},
+				"url": {
+					"raw": "{{base_url}}/api/admin-dashboard/create-agent/",
+					"host": [
+						"{{base_url}}"
+					],
+					"path": [
+						"api",
+						"admin-dashboard",
+						"create-agent",
+						""
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "5. Test Error - Missing Fields",
+			"event": [
+				{
+					"listen": "test",
+					"script": {
+						"exec": [
+							"// Verify required field validation",
+							"pm.test(\"Missing fields rejected\", function () {",
+							"    pm.expect(pm.response.code).to.eql(400);",
+							"});",
+							"",
+							"if (pm.response.code === 400) {",
+							"    const response = pm.response.json();",
+							"    pm.test(\"Required field errors returned\", function () {",
+							"        pm.expect(response).to.have.property(\"email\");",
+							"        pm.expect(response).to.have.property(\"specialization\");",
+							"    });",
+							"}"
+						],
+						"type": "text/javascript"
+					}
+				}
+			],
+			"request": {
+				"method": "POST",
+				"header": [
+					{
+						"key": "Authorization",
+						"value": "Bearer {{admin_token}}"
+					},
+					{
+						"key": "Content-Type",
+						"value": "application/json"
+					}
+				],
+				"body": {
+					"mode": "raw",
+					"raw": "{\n    \"name\": \"Incomplete Agent\",\n    \"phone\": \"1234567890\"\n}"
+				},
+				"url": {
+					"raw": "{{base_url}}/api/admin-dashboard/create-agent/",
+					"host": [
+						"{{base_url}}"
+					],
+					"path": [
+						"api",
+						"admin-dashboard",
+						"create-agent",
+						""
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "6. SuperAdmin Login (No Company ID)",
+			"event": [
+				{
+					"listen": "test",
+					"script": {
+						"exec": [
+							"// Save superadmin token",
+							"if (pm.response.code === 200) {",
+							"    const response = pm.response.json();",
+							"    pm.collectionVariables.set(\"superadmin_token\", response.access);",
+							"    pm.test(\"SuperAdmin login successful\", function () {",
+							"        pm.expect(response.user.role).to.eql(\"SUPERADMIN\");",
+							"    });",
+							"    pm.test(\"SuperAdmin has no company_id\", function () {",
+							"        pm.expect(response.user.company_id).to.be.null;",
+							"    });",
+							"}"
+						],
+						"type": "text/javascript"
+					}
+				}
+			],
+			"request": {
+				"method": "POST",
+				"header": [
+					{
+						"key": "Content-Type",
+						"value": "application/json"
+					}
+				],
+				"body": {
+					"mode": "raw",
+					"raw": "{\n    \"username\": \"superadmin\",\n    \"password\": \"superadmin123\"\n}"
+				},
+				"url": {
+					"raw": "{{base_url}}/api/auth/login/",
+					"host": [
+						"{{base_url}}"
+					],
+					"path": [
+						"api",
+						"auth",
+						"login",
+						""
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "7. Test Error - SuperAdmin Without Company ID",
+			"event": [
+				{
+					"listen": "test",
+					"script": {
+						"exec": [
+							"// Verify SuperAdmin cannot create agents without company_id",
+							"pm.test(\"SuperAdmin without company_id rejected\", function () {",
+							"    pm.expect(pm.response.code).to.eql(400);",
+							"});",
+							"",
+							"if (pm.response.code === 400) {",
+							"    const response = pm.response.json();",
+							"    pm.test(\"Company ID required error returned\", function () {",
+							"        pm.expect(response.error).to.include(\"company_id\");",
+							"    });",
+							"}"
+						],
+						"type": "text/javascript"
+					}
+				}
+			],
+			"request": {
+				"method": "POST",
+				"header": [
+					{
+						"key": "Authorization",
+						"value": "Bearer {{superadmin_token}}"
+					},
+					{
+						"key": "Content-Type",
+						"value": "application/json"
+					}
+				],
+				"body": {
+					"mode": "raw",
+					"raw": "{\n    \"name\": \"Should Fail Agent\",\n    \"phone\": \"1234567890\",\n    \"email\": \"should.fail@company.com\",\n    \"specialization\": \"Customer Support\"\n}"
+				},
+				"url": {
+					"raw": "{{base_url}}/api/admin-dashboard/create-agent/",
+					"host": [
+						"{{base_url}}"
+					],
+					"path": [
+						"api",
+						"admin-dashboard",
+						"create-agent",
+						""
+					]
+				}
+			},
+			"response": []
+		}
+	],
+	"event": [
+		{
+			"listen": "prerequest",
+			"script": {
+				"type": "text/javascript",
+				"exec": [
+					""
+				]
+			}
+		},
+		{
+			"listen": "test",
+			"script": {
+				"type": "text/javascript",
+				"exec": [
+					""
+				]
+			}
+		}
+	],
+	"variable": [
+		{
+			"key": "base_url",
+			"value": "http://127.0.0.1:8000",
+			"type": "string"
+		},
+		{
+			"key": "admin_token",
+			"value": "",
+			"type": "string"
+		},
+		{
+			"key": "superadmin_token",
+			"value": "",
+			"type": "string"
+		},
+		{
+			"key": "admin_company_id",
+			"value": "",
+			"type": "string"
+		},
+		{
+			"key": "created_agent_id",
+			"value": "",
+			"type": "string"
+		}
+	]
+}

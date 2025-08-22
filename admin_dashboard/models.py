@@ -23,6 +23,7 @@ class Agent(models.Model):
     phone = models.CharField(max_length=20)
     email = models.EmailField(unique=True)
     specialization = models.CharField(max_length=200)
+    company_id = models.CharField(max_length=20, null=True, blank=True, help_text="Company ID of the admin who created this agent")
 
     # Status and Activity Tracking
     status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='OFFLINE')

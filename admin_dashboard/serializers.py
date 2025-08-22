@@ -13,6 +13,13 @@ class AgentCreateSerializer(serializers.ModelSerializer):
         model = Agent
         fields = ('name', 'phone', 'email', 'specialization')
     
+    def validate(self, attrs):
+        # Ensure the admin has a company_id
+        admin_user = self.context['request'].user
+        if not admin_user.company_id:
+            raise serializers.ValidationError("Admin user must have a company_id to create agents.")
+        return attrs
+    
     def validate_email(self, value):
         # Check if email is already taken
         if User.objects.filter(email=value).exists():
@@ -22,6 +29,10 @@ class AgentCreateSerializer(serializers.ModelSerializer):
         return value
     
     def create(self, validated_data):
+        # Get admin user and company_id from JWT token
+        admin_user = self.context['request'].user
+        company_id = admin_user.company_id
+        
         # Generate random password
         password = ''.join(secrets.choice(string.ascii_letters + string.digits) for _ in range(8))
         
@@ -37,14 +48,15 @@ class AgentCreateSerializer(serializers.ModelSerializer):
             generated_password=password
         )
         
-        # Create Agent profile
+        # Create Agent profile with company_id from admin
         agent = Agent.objects.create(
             user=user,
             name=validated_data['name'],
             phone=validated_data['phone'],
             email=validated_data['email'],
             specialization=validated_data['specialization'],
-            created_by=self.context['request'].user
+            company_id=company_id,  # Automatically set from admin's JWT token
+            created_by=admin_user
         )
         
         # Store generated password for response
@@ -61,8 +73,8 @@ class AgentListSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Agent
-        fields = ('id', 'sn', 'name', 'email', 'phone', 'specialization', 'status', 'formatted_last_active', 'generated_password', 'is_first_login', 'is_active', 'created_at')
-        read_only_fields = ('id', 'created_at')
+        fields = ('id', 'sn', 'name', 'email', 'phone', 'specialization', 'company_id', 'status', 'formatted_last_active', 'generated_password', 'is_first_login', 'is_active', 'created_at')
+        read_only_fields = ('id', 'company_id', 'created_at')
 
     def get_sn(self, obj):
         # Get the index of this object in the queryset
