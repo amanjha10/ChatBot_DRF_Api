@@ -20,11 +20,13 @@ class User(AbstractUser):
     )
 
     # Additional profile fields
+    name = models.CharField(max_length=100, blank=True, null=True, help_text="Full name for company ID generation")
     address = models.TextField(blank=True, null=True)
     contact_person = models.CharField(max_length=100, blank=True, null=True)
     contact_number = models.CharField(max_length=20, blank=True, null=True)
     phone_number = models.CharField(max_length=20, blank=True, null=True)
     generated_password = models.CharField(max_length=50, blank=True, null=True)  # Store generated password
+    company_id = models.CharField(max_length=20, unique=True, blank=True, null=True, help_text="Unique company identifier for chatbot integration")
 
     @property
     def current_plan_assignment(self):

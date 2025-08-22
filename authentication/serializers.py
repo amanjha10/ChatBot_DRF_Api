@@ -43,8 +43,9 @@ class AdminCreateSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = User
-        fields = ('email', 'address', 'contact_person', 'contact_number', 'phone_number', 'plan_id')
+        fields = ('name', 'email', 'address', 'contact_person', 'contact_number', 'phone_number', 'plan_id')
         extra_kwargs = {
+            'name': {'required': True},
             'email': {'required': True},
             'address': {'required': False},
             'contact_person': {'required': False},
@@ -65,6 +66,21 @@ class AdminCreateSerializer(serializers.ModelSerializer):
         alphabet = string.ascii_letters + string.digits
         return ''.join(secrets.choice(alphabet) for _ in range(8))
 
+    def generate_company_id(self, name):
+        """Generate unique company ID from name."""
+        # Extract first 3 characters from name and convert to uppercase
+        # Remove spaces and take first 3 alphabetic characters
+        clean_name = ''.join(char for char in name if char.isalpha())
+        prefix = clean_name[:3].upper() if len(clean_name) >= 3 else clean_name.upper().ljust(3, 'X')
+        
+        # Find the next available number
+        counter = 1
+        while True:
+            company_id = f"{prefix}{counter:03d}"
+            if not User.objects.filter(company_id=company_id).exists():
+                return company_id
+            counter += 1
+
     def validate_email(self, value):
         """Check if email already exists."""
         if User.objects.filter(email=value).exists():
@@ -79,9 +95,20 @@ class AdminCreateSerializer(serializers.ModelSerializer):
         # Get plan from validated plan_id
         plan = validated_data.pop('plan_id')
 
-        # Create username from email (before @ symbol)
+        # Get name and email
+        name = validated_data['name']
         email = validated_data['email']
+        
+        # Create username from email (before @ symbol)
         username = email.split('@')[0]
+
+        # Generate unique company ID from name
+        company_id = self.generate_company_id(name)
+
+        # Extract first and last name from full name
+        name_parts = name.strip().split()
+        first_name = name_parts[0] if name_parts else ''
+        last_name = ' '.join(name_parts[1:]) if len(name_parts) > 1 else 'Admin'
 
         # Ensure username is unique
         base_username = username
@@ -95,14 +122,16 @@ class AdminCreateSerializer(serializers.ModelSerializer):
             username=username,
             email=email,
             password=password,
-            first_name=username.title(),  # Use username as first name
-            last_name='Admin',
+            first_name=first_name,
+            last_name=last_name,
             role=User.Role.ADMIN,
+            name=name,  # Store full name
             address=validated_data.get('address', ''),
             contact_person=validated_data.get('contact_person', ''),
             contact_number=validated_data.get('contact_number', ''),
             phone_number=validated_data.get('phone_number', ''),
-            generated_password=password  # Store generated password
+            generated_password=password,  # Store generated password
+            company_id=company_id  # Store unique company ID
         )
 
         # Create plan assignment
@@ -125,8 +154,8 @@ class UserSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = User
-        fields = ('id', 'username', 'email', 'first_name', 'last_name', 'role', 'address', 'contact_person', 'contact_number', 'phone_number', 'current_plan', 'generated_password', 'date_joined')
-        read_only_fields = ('id', 'date_joined')
+        fields = ('id', 'username', 'email', 'first_name', 'last_name', 'name', 'role', 'address', 'contact_person', 'contact_number', 'phone_number', 'company_id', 'current_plan', 'generated_password', 'date_joined')
+        read_only_fields = ('id', 'company_id', 'date_joined')
 
     def get_current_plan(self, obj):
         assignment = obj.current_plan_assignment
@@ -147,8 +176,8 @@ class AdminListSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = User
-        fields = ('id', 'username', 'email', 'first_name', 'last_name', 'address', 'contact_person', 'contact_number', 'phone_number', 'current_plan', 'generated_password', 'date_joined', 'is_active')
-        read_only_fields = ('id', 'username', 'generated_password', 'date_joined')
+        fields = ('id', 'username', 'email', 'first_name', 'last_name', 'name', 'address', 'contact_person', 'contact_number', 'phone_number', 'company_id', 'current_plan', 'generated_password', 'date_joined', 'is_active')
+        read_only_fields = ('id', 'username', 'company_id', 'generated_password', 'date_joined')
 
     def get_current_plan(self, obj):
         assignment = obj.current_plan_assignment
@@ -172,8 +201,9 @@ class AdminUpdateSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = User
-        fields = ('email', 'first_name', 'last_name', 'address', 'contact_person', 'contact_number', 'phone_number')
+        fields = ('name', 'email', 'first_name', 'last_name', 'address', 'contact_person', 'contact_number', 'phone_number')
         extra_kwargs = {
+            'name': {'required': False},
             'email': {'required': False},
             'first_name': {'required': False},
             'last_name': {'required': False},

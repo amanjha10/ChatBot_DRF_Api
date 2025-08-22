@@ -36,6 +36,7 @@ def create_admin_view(request):
 
     Expected form data:
     {
+        "name": "John Smith Technology",
         "email": "admin@company.com",
         "address": "123 Main St",
         "contact_person": "Emergency Contact Name",
@@ -45,11 +46,14 @@ def create_admin_view(request):
     }
 
     Note: Plan assignment is created automatically with 1-year expiry.
+    Company ID is generated from the first 3 letters of the name field.
 
     Returns:
     {
+        "name": "John Smith Technology",
         "email": "john@example.com",
-        "password": "Abc123Xy"
+        "password": "Abc123Xy",
+        "company_id": "JOH001"
     }
     """
     serializer = AdminCreateSerializer(data=request.data)
@@ -58,8 +62,10 @@ def create_admin_view(request):
             user = serializer.save()
 
             return Response({
+                'name': user.name,
                 'email': user.email,
                 'password': user._generated_password,
+                'company_id': user.company_id,
                 'plan': {
                     'id': user._assigned_plan.id,
                     'name': user._assigned_plan.get_plan_name_display(),
