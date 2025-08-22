@@ -92,12 +92,40 @@ def list_admins_view(request):
     """
     Get list of all created admin users with complete information.
     GET /api/auth/list-admins/
+    GET /api/auth/list-admins/?admin_id=2  (for specific admin)
 
-    Returns list of admin users with their plan details, contact info, and generated passwords.
+    Query Parameters:
+    - admin_id (optional): Filter to get specific admin by ID
+
+    Returns:
+    - Without admin_id: List of all admin users
+    - With admin_id: Single admin object (not in array)
+
+    Examples:
+    GET /api/auth/list-admins/
+    Returns: [{"id": 1, "name": "Admin 1"}, {"id": 2, "name": "Admin 2"}]
+
+    GET /api/auth/list-admins/?admin_id=2
+    Returns: {"id": 2, "name": "Admin 2", "email": "admin2@example.com", ...}
     """
-    admins = User.objects.filter(role=User.Role.ADMIN).order_by('-date_joined')
-    serializer = AdminListSerializer(admins, many=True)
-    return Response(serializer.data, status=status.HTTP_200_OK)
+    admin_id = request.GET.get('admin_id')
+    
+    if admin_id:
+        # Filter for specific admin
+        try:
+            admin_id = int(admin_id)
+            admin = User.objects.get(id=admin_id, role=User.Role.ADMIN)
+            serializer = AdminListSerializer(admin)
+            return Response(serializer.data, status=status.HTTP_200_OK)
+        except (ValueError, TypeError):
+            return Response({'error': 'Invalid admin_id parameter. Must be a number.'}, status=status.HTTP_400_BAD_REQUEST)
+        except User.DoesNotExist:
+            return Response({'error': 'Admin not found with the given ID.'}, status=status.HTTP_404_NOT_FOUND)
+    else:
+        # Return all admins
+        admins = User.objects.filter(role=User.Role.ADMIN).order_by('-date_joined')
+        serializer = AdminListSerializer(admins, many=True)
+        return Response(serializer.data, status=status.HTTP_200_OK)
 
 
 @api_view(['PUT', 'PATCH'])

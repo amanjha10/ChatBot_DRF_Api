@@ -150,7 +150,7 @@
       }
     },
     {
-      "name": "5. List Admins",
+      "name": "5. List All Admins",
       "request": {
         "method": "GET",
         "header": [
@@ -163,6 +163,98 @@
           "raw": "{{base_url}}/api/auth/list-admins/",
           "host": ["{{base_url}}"],
           "path": ["api", "auth", "list-admins", ""]
+        }
+      }
+    },
+    {
+      "name": "5b. Get Specific Admin by ID",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test(\"Get specific admin successful\", function () {",
+              "    pm.expect(pm.response.code).to.equal(200);",
+              "});",
+              "",
+              "pm.test(\"Response is single admin object\", function () {",
+              "    const responseJson = pm.response.json();",
+              "    pm.expect(responseJson).to.be.an('object');",
+              "    pm.expect(responseJson).to.have.property('id');",
+              "    pm.expect(responseJson).to.have.property('name');",
+              "    pm.expect(responseJson).to.have.property('email');",
+              "});",
+              "",
+              "pm.test(\"Admin has required fields\", function () {",
+              "    const responseJson = pm.response.json();",
+              "    pm.expect(responseJson).to.have.property('company_id');",
+              "    pm.expect(responseJson).to.have.property('current_plan');",
+              "});"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "Bearer {{token}}"
+          }
+        ],
+        "url": {
+          "raw": "{{base_url}}/api/auth/list-admins/?admin_id=2",
+          "host": ["{{base_url}}"],
+          "path": ["api", "auth", "list-admins", ""],
+          "query": [
+            {
+              "key": "admin_id",
+              "value": "2",
+              "description": "Get specific admin by ID"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "name": "5c. Error Test - Invalid Admin ID",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test(\"Invalid admin_id returns 400\", function () {",
+              "    pm.expect(pm.response.code).to.equal(400);",
+              "});",
+              "",
+              "pm.test(\"Error message present\", function () {",
+              "    const responseJson = pm.response.json();",
+              "    pm.expect(responseJson).to.have.property('error');",
+              "    pm.expect(responseJson.error).to.include('Invalid admin_id');",
+              "});"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "Bearer {{token}}"
+          }
+        ],
+        "url": {
+          "raw": "{{base_url}}/api/auth/list-admins/?admin_id=abc",
+          "host": ["{{base_url}}"],
+          "path": ["api", "auth", "list-admins", ""],
+          "query": [
+            {
+              "key": "admin_id",
+              "value": "abc",
+              "description": "Test invalid admin_id"
+            }
+          ]
         }
       }
     },
