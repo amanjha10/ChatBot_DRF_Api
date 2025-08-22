@@ -12,6 +12,7 @@ urlpatterns = [
     path('create-admin/', views.create_admin_view, name='create_admin'),
     path('list-admins/', views.list_admins_view, name='list_admins'),
     path('update-admin/<int:admin_id>/', views.update_admin_view, name='update_admin'),
+    path('delete-admin/<int:admin_id>/', views.delete_admin_view, name='delete_admin'),
     path('change-admin-plan/<int:admin_id>/', views.change_admin_plan_view, name='change_admin_plan'),
 
     # Plan Management endpoints (SuperAdmin only)

@@ -2,13 +2,28 @@
 
 A production-ready DRF authentication system with role-based access control using SimpleJWT.
 
+## ✨ Recent Updates (August 2025)
+
+### 🎯 Admin Management Enhancements
+- ✅ **Name Field Integration**: Added `name` field to admin creation (replaces first_name/last_name)
+- ✅ **Company ID from Name**: Generate company IDs from name field (e.g., "Tesla Motors" → "TES001")
+- ✅ **Query Parameter Support**: Get specific admin by ID (`/list-admins/?admin_id=2`)
+- ✅ **Delete Admin API**: Full cascade deletion with plan assignments cleanup
+- ✅ **Clean API Responses**: Removed unnecessary fields (first_name, last_name, username)
+
+### 🧪 Comprehensive Testing
+- ✅ **Postman Collection**: Updated with all new endpoints and error cases
+- ✅ **Test Scripts**: Multiple test files for different scenarios
+- ✅ **Error Handling**: Proper 404/400 responses with meaningful messages
+
 ## Features
 
 - **Custom User Model** with role-based access (SUPERADMIN, ADMIN, AGENT)
 - **JWT Authentication** using SimpleJWT
 - **Role-based Permissions** with custom permission classes
-- **Clean API Endpoints** for authentication and user management
-- **Chat Assignment System** for agents
+- **Plan Management System** with automatic assignments
+- **Admin Management** with company ID generation
+- **Agent Assignment System** for chat management
 
 ## User Roles
 
@@ -23,16 +38,23 @@ A production-ready DRF authentication system with role-based access control usin
 - `POST /api/auth/token/refresh/` - Refresh JWT token
 - `GET /api/auth/profile/` - Get current user profile
 
-### SuperAdmin Only
-- `POST /api/auth/create-admin/` - Create Admin users
+### SuperAdmin Only - Admin Management
+- `POST /api/auth/create-admin/` - Create Admin users (with name field & company ID)
+- `GET /api/auth/list-admins/` - List all admins (clean response)
+- `GET /api/auth/list-admins/?admin_id=X` - Get specific admin by ID
+- `PUT/PATCH /api/auth/update-admin/<id>/` - Update admin information
+- `DELETE /api/auth/delete-admin/<id>/` - Delete admin (cascade deletion)
+- `POST /api/auth/change-admin-plan/<id>/` - Change admin's plan
 
-### Admin Only
-- `POST /api/auth/assign-agent/` - Assign Agent to chat
-- `GET /api/auth/available-agents/` - Get list of available agents
-- `POST /api/auth/create-chat/` - Create new chat
+### SuperAdmin Only - Plan Management
+- `POST /api/auth/create-plan/` - Create new plans
+- `GET /api/auth/list-plans/` - List all available plans
+- `GET /api/auth/list-user-plan-assignments/` - View plan assignments
 
-### Agent Only
-- `GET /api/auth/my-chats/` - View assigned chats
+### Admin Dashboard (Admin Role)
+- `POST /api/admin-dashboard/create-agent/` - Create new agents
+- `GET /api/admin-dashboard/list-agents/` - List company agents
+- `POST /api/admin-dashboard/agent-first-login/` - Agent password setup
 
 ## Setup Instructions
 

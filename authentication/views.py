@@ -216,6 +216,55 @@ def change_admin_plan_view(request, admin_id):
     return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 
+@api_view(['DELETE'])
+@permission_classes([IsSuperAdmin])
+def delete_admin_view(request, admin_id):
+    """
+    Delete admin user and all associated data.
+    DELETE /api/auth/delete-admin/<admin_id>/
+
+    This endpoint will:
+    1. Delete all plan assignments for the admin
+    2. Delete the admin user
+    3. Return confirmation message
+
+    Returns:
+    {
+        "message": "Admin deleted successfully",
+        "deleted_admin": {
+            "id": 2,
+            "name": "John Smith Technology",
+            "email": "admin@company.com",
+            "company_id": "JOH001"
+        }
+    }
+    """
+    try:
+        admin = User.objects.get(id=admin_id, role=User.Role.ADMIN)
+    except User.DoesNotExist:
+        return Response({'error': 'Admin not found'}, status=status.HTTP_404_NOT_FOUND)
+
+    # Store admin info for response before deletion
+    admin_info = {
+        'id': admin.id,
+        'name': admin.name,
+        'email': admin.email,
+        'company_id': admin.company_id
+    }
+
+    with transaction.atomic():
+        # Delete all plan assignments for this admin
+        UserPlanAssignment.objects.filter(user=admin).delete()
+        
+        # Delete the admin user
+        admin.delete()
+
+    return Response({
+        'message': 'Admin deleted successfully',
+        'deleted_admin': admin_info
+    }, status=status.HTTP_200_OK)
+
+
 # Plan Management Views
 
 @api_view(['POST'])

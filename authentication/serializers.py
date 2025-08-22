@@ -176,8 +176,8 @@ class AdminListSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = User
-        fields = ('id', 'username', 'email', 'first_name', 'last_name', 'name', 'address', 'contact_person', 'contact_number', 'phone_number', 'company_id', 'current_plan', 'generated_password', 'date_joined', 'is_active')
-        read_only_fields = ('id', 'username', 'company_id', 'generated_password', 'date_joined')
+        fields = ('id', 'email', 'name', 'address', 'contact_person', 'contact_number', 'phone_number', 'company_id', 'current_plan', 'generated_password', 'date_joined', 'is_active')
+        read_only_fields = ('id', 'company_id', 'generated_password', 'date_joined')
 
     def get_current_plan(self, obj):
         assignment = obj.current_plan_assignment

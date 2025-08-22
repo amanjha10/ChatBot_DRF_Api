@@ -259,7 +259,86 @@
       }
     },
     {
-      "name": "6. Error Test - Missing Name",
+      "name": "6. Delete Admin by ID",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test(\"Delete admin successful\", function () {",
+              "    pm.expect(pm.response.code).to.equal(200);",
+              "});",
+              "",
+              "pm.test(\"Response contains confirmation message\", function () {",
+              "    const responseJson = pm.response.json();",
+              "    pm.expect(responseJson).to.have.property('message');",
+              "    pm.expect(responseJson.message).to.include('deleted successfully');",
+              "});",
+              "",
+              "pm.test(\"Response contains deleted admin info\", function () {",
+              "    const responseJson = pm.response.json();",
+              "    pm.expect(responseJson).to.have.property('deleted_admin');",
+              "    pm.expect(responseJson.deleted_admin).to.have.property('id');",
+              "    pm.expect(responseJson.deleted_admin).to.have.property('name');",
+              "    pm.expect(responseJson.deleted_admin).to.have.property('email');",
+              "    pm.expect(responseJson.deleted_admin).to.have.property('company_id');",
+              "});"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "DELETE",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "Bearer {{token}}"
+          }
+        ],
+        "url": {
+          "raw": "{{base_url}}/api/auth/delete-admin/2/",
+          "host": ["{{base_url}}"],
+          "path": ["api", "auth", "delete-admin", "2", ""]
+        }
+      }
+    },
+    {
+      "name": "6b. Error Test - Delete Non-existent Admin",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test(\"Delete non-existent admin returns 404\", function () {",
+              "    pm.expect(pm.response.code).to.equal(404);",
+              "});",
+              "",
+              "pm.test(\"Error message present\", function () {",
+              "    const responseJson = pm.response.json();",
+              "    pm.expect(responseJson).to.have.property('error');",
+              "    pm.expect(responseJson.error).to.include('Admin not found');",
+              "});"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "DELETE",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "Bearer {{token}}"
+          }
+        ],
+        "url": {
+          "raw": "{{base_url}}/api/auth/delete-admin/9999/",
+          "host": ["{{base_url}}"],
+          "path": ["api", "auth", "delete-admin", "9999", ""]
+        }
+      }
+    },
+    {
+      "name": "7. Error Test - Missing Name",
       "request": {
         "method": "POST",
         "header": [
