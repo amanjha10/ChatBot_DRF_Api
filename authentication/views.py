@@ -36,14 +36,100 @@ class AdminPagination(PageNumberPagination):
 @permission_classes([AllowAny])
 def login_view(request):
     """
-    Login endpoint that returns JWT token and user role.
+    Unified login endpoint for all user roles (SuperAdmin, Admin, Agent).
     POST /api/auth/login/
+    
+    Expected form data:
+    {
+        "username": "user@example.com",  // Can be username or email
+        "password": "password123"
+    }
+    
+    Returns different responses based on user role:
+    
+    SuperAdmin/Admin:
+    {
+        "access": "jwt_token",
+        "refresh": "refresh_token", 
+        "user": {
+            "id": 1,
+            "role": "ADMIN",
+            "email": "admin@example.com",
+            "company_id": "COM001"
+        }
+    }
+    
+    Agent (successful login):
+    {
+        "access": "jwt_token",
+        "refresh": "refresh_token",
+        "user": {
+            "id": 1,
+            "role": "AGENT",
+            "email": "agent@example.com"
+        },
+        "agent": {
+            "id": 1,
+            "name": "Agent Name",
+            "status": "AVAILABLE",
+            "is_first_login": false
+        }
+    }
+    
+    Agent (first login required):
+    {
+        "error": "First login required",
+        "message": "Please set your password using the first-login endpoint",
+        "is_first_login": true,
+        "email": "agent@example.com"
+    }
     """
-    serializer = LoginSerializer(data=request.data)
+    serializer = LoginSerializer(data=request.data, context={'request': request})
     if serializer.is_valid():
         user = serializer.validated_data['user']
+        
+        # Handle agent-specific logic
+        if user.role == User.Role.AGENT:
+            try:
+                agent = user.agent_profile
+                
+                # Check if first login
+                if agent.is_first_login:
+                    return Response({
+                        'error': 'First login required',
+                        'message': 'Please set your password using the first-login endpoint',
+                        'is_first_login': True,
+                        'email': user.email
+                    }, status=status.HTTP_200_OK)
+                
+                # Agent login successful - update status and create session
+                with transaction.atomic():
+                    agent.set_online()
+                    
+                    # Create session record
+                    from admin_dashboard.models import AgentSession
+                    ip_address = request.META.get('REMOTE_ADDR')
+                    AgentSession.objects.create(agent=agent, ip_address=ip_address)
+                
+                # Generate token response with agent data
+                token_data = TokenResponseSerializer.get_token_response(user)
+                token_data['agent'] = {
+                    'id': agent.id,
+                    'name': agent.name,
+                    'email': agent.email,
+                    'status': agent.status,
+                    'is_first_login': agent.is_first_login,
+                    'company_id': agent.company_id
+                }
+                return Response(token_data, status=status.HTTP_200_OK)
+                
+            except Exception as e:
+                return Response({'error': 'Agent profile not found'}, status=status.HTTP_404_NOT_FOUND)
+        
+        # Handle SuperAdmin and Admin login (existing logic)
         token_data = TokenResponseSerializer.get_token_response(user)
         return Response(token_data, status=status.HTTP_200_OK)
+    
     return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 
