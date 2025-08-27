@@ -2,6 +2,12 @@ from django.urls import path
 from . import views
 
 urlpatterns = [
+    # User Profile Management (Admin/SuperAdmin only)
+    path('user-profiles/', views.user_profiles_list_view, name='user_profiles_list'),
+    path('user-profiles/<int:profile_id>/', views.user_profile_detail_view, name='user_profile_detail'),
+    path('user-profiles/stats/', views.user_profiles_stats_view, name='user_profiles_stats'),
+    path('user-profiles/<int:profile_id>/delete/', views.delete_user_profile_view, name='delete_user_profile'),
+    
     # Agent Management (Admin/SuperAdmin only)
     path('create-agent/', views.create_agent_view, name='create_agent'),
     path('list-agents/', views.list_agents_view, name='list_agents'),

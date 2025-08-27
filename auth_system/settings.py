@@ -37,6 +37,8 @@ THIRD_PARTY_APPS = [
 LOCAL_APPS = [
     'authentication',
     'admin_dashboard',
+    'chatbot',
+    'human_handoff',
 ]
 
 INSTALLED_APPS = DJANGO_APPS + THIRD_PARTY_APPS + LOCAL_APPS
@@ -104,6 +106,37 @@ USE_TZ = True
 
 # Static files (CSS, JavaScript, Images)
 STATIC_URL = 'static/'
+STATIC_ROOT = BASE_DIR / 'staticfiles'
+
+# Media files (uploaded files)
+MEDIA_URL = '/media/'
+MEDIA_ROOT = BASE_DIR / 'media'
+
+# File upload settings
+FILE_UPLOAD_MAX_MEMORY_SIZE = 10 * 1024 * 1024  # 10MB
+DATA_UPLOAD_MAX_MEMORY_SIZE = 10 * 1024 * 1024  # 10MB
+FILE_UPLOAD_PERMISSIONS = 0o644
+
+# Allowed file types for uploads
+ALLOWED_FILE_TYPES = [
+    # Images
+    'jpg', 'jpeg', 'png', 'gif', 'bmp', 'webp',
+    # Documents
+    'pdf', 'doc', 'docx', 'txt', 'rtf',
+    # Spreadsheets
+    'xls', 'xlsx', 'csv',
+    # Presentations
+    'ppt', 'pptx',
+    # Audio
+    'mp3', 'wav', 'ogg', 'm4a',
+    # Video
+    'mp4', 'avi', 'mov', 'wmv', 'flv',
+    # Archives
+    'zip', 'rar', '7z', 'tar', 'gz'
+]
+
+# Maximum file size (10MB)
+MAX_FILE_SIZE = 10 * 1024 * 1024
 
 # Default primary key field type
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'

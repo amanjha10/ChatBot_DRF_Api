@@ -1,195 +1,237 @@
-# Django REST Framework Authentication System
+# 🚀 Django Multi-tenant Chatbot System
 
-A production-ready DRF authentication system with role-based access control using SimpleJWT.
+A comprehensive Django REST Framework chatbot system with complete multi-tenant support, role-based access control, and company-based data isolation.
 
-## ✨ Recent Updates (August 2025)
+## ✨ Key Features
 
-### 🎯 Admin Management Enhancements
-- ✅ **Name Field Integration**: Added `name` field to admin creation (replaces first_name/last_name)
-- ✅ **Company ID from Name**: Generate company IDs from name field (e.g., "Tesla Motors" → "TES001")
-- ✅ **Query Parameter Support**: Get specific admin by ID (`/list-admins/?admin_id=2`)
-- ✅ **Delete Admin API**: Full cascade deletion with plan assignments cleanup
-- ✅ **Clean API Responses**: Removed unnecessary fields (first_name, last_name, username)
+### 🏢 Multi-tenant Architecture
+- **Complete Company Isolation**: Each company's data is completely separated
+- **Company-based Authentication**: JWT tokens include company context
+- **Role-based Access Control**: SUPERADMIN > ADMIN > AGENT hierarchy
+- **Secure Data Filtering**: All queries filtered by company_id
 
-### 🧪 Comprehensive Testing
-- ✅ **Postman Collection**: Updated with all new endpoints and error cases
-- ✅ **Test Scripts**: Multiple test files for different scenarios
-- ✅ **Error Handling**: Proper 404/400 responses with meaningful messages
+### 💬 Chatbot System
+- **AI-powered Conversations**: Intelligent chatbot with RAG integration
+- **6-step Profile Collection**: Systematic user information gathering
+- **Session Management**: Persistent chat sessions with company context
+- **Human Handoff**: Seamless escalation to human agents
+- **📁 File Upload Support**: Upload and share files in chat messages
 
-## Features
+### 📁 File Upload Features (NEW!)
+- **Multi-format Support**: Images, documents, audio, video, archives
+- **Secure Storage**: Company-isolated file storage with 10MB limit
+- **Chat Integration**: Send text, attachments, or both in messages
+- **Agent Access**: Agents can view and download user attachments
+- **File Validation**: Type and size validation with error handling
 
-- **Custom User Model** with role-based access (SUPERADMIN, ADMIN, AGENT)
-- **JWT Authentication** using SimpleJWT
-- **Role-based Permissions** with custom permission classes
-- **Plan Management System** with automatic assignments
-- **Admin Management** with company ID generation
-- **Agent Assignment System** for chat management
+### 👥 User Management
+- **SuperAdmin**: Manages all companies and plans
+- **Admin**: Manages company-specific agents and sessions
+- **Agent**: Handles assigned customer sessions
 
-## User Roles
+### 🔐 Security Features
+- **JWT Authentication**: Secure token-based authentication
+- **Company Isolation**: Cross-company access prevention
+- **Role-based Permissions**: Granular access control
+- **Password Management**: Secure password generation and reset
 
-- **SUPERADMIN**: Can create Admin users
-- **ADMIN**: Can assign Agents to chats and create chats
-- **AGENT**: Can view their assigned chats
+## 🏗️ System Architecture
 
-## API Endpoints
+```
+SuperAdmin
+├── Creates Admin Users (with company_id)
+│
+Admin (Company A)
+├── Creates Agents (Company A only)
+├── Views Profiles (Company A only)
+├── Manages Sessions (Company A only)
+│
+Agent (Company A)
+├── Handles Assigned Sessions (Company A only)
+├── Sends Messages (Company A sessions only)
+├── Updates Status (Own status only)
+```
 
-### Authentication
-- `POST /api/auth/login/` - Login with email/username + password
+## 🚀 Quick Start
+
+### 1. Installation
+```bash
+# Clone the repository
+git clone <your-repo-url>
+cd django-chatbot-system
+
+# Create virtual environment
+python -m venv venv
+source venv/bin/activate  # On Windows: venv\Scripts\activate
+
+# Install dependencies
+pip install -r requirements.txt
+```
+
+### 2. Database Setup
+```bash
+# Run migrations
+python manage.py migrate
+
+# Create superuser
+python manage.py createsuperuser
+```
+
+### 3. Start Development Server
+```bash
+python manage.py runserver
+```
+
+## 📚 Documentation
+
+### 📖 Main Documentation
+- **[📋 Complete API Documentation](docs/COMPLETE_API_DOCUMENTATION.md)** - Full API reference
+- **[🧪 Step-by-Step Testing Guide](docs/STEP_BY_STEP_TESTING_GUIDE.md)** - Comprehensive testing
+- **[📋 Quick API Reference](docs/QUICK_API_REFERENCE.md)** - Quick reference guide
+- **[🚀 Deployment Setup Guide](docs/DEPLOYMENT_SETUP_GUIDE.md)** - Production deployment
+
+### 🔧 Implementation Details
+- **[🏢 Company Isolation Complete](docs/COMPANY_ISOLATION_COMPLETE.md)** - Multi-tenant architecture
+- **[🔐 Unified Login Documentation](docs/UNIFIED_LOGIN_DOCUMENTATION.md)** - Authentication system
+- **[👥 Admin Dashboard API](docs/ADMIN_DASHBOARD_API.md)** - Admin functionality
+
+### 🧪 Testing Resources
+- **[🧪 Complete Testing Guide](docs/COMPLETE_TESTING_GUIDE.md)** - Full testing procedures
+- **[📮 Postman API Testing Guide](docs/POSTMAN_API_TESTING_GUIDE.md)** - Postman setup
+- **See `tests/` directory for Python test scripts and Postman collections**
+
+## 🌐 API Endpoints Overview
+
+### 🔑 Authentication
+- `POST /api/auth/login/` - Universal login for all roles
 - `POST /api/auth/token/refresh/` - Refresh JWT token
-- `GET /api/auth/profile/` - Get current user profile
 
-### SuperAdmin Only - Admin Management
-- `POST /api/auth/create-admin/` - Create Admin users (with name field & company ID)
-- `GET /api/auth/list-admins/` - List all admins (clean response)
-- `GET /api/auth/list-admins/?admin_id=X` - Get specific admin by ID
-- `PUT/PATCH /api/auth/update-admin/<id>/` - Update admin information
-- `DELETE /api/auth/delete-admin/<id>/` - Delete admin (cascade deletion)
-- `POST /api/auth/change-admin-plan/<id>/` - Change admin's plan
+### 🏢 SuperAdmin APIs
+- `POST /api/auth/create-admin/` - Create admin with company
+- `GET /api/auth/list-admins/` - List all admins
+- `PUT /api/auth/update-admin/{id}/` - Update admin
+- `DELETE /api/auth/delete-admin/{id}/` - Delete admin
 
-### SuperAdmin Only - Plan Management
-- `POST /api/auth/create-plan/` - Create new plans
-- `GET /api/auth/list-plans/` - List all available plans
-- `GET /api/auth/list-user-plan-assignments/` - View plan assignments
-
-### Admin Dashboard (Admin Role)
-- `POST /api/admin-dashboard/create-agent/` - Create new agents
+### 👥 Admin Dashboard APIs
+- `POST /api/admin-dashboard/create-agent/` - Create company agent
 - `GET /api/admin-dashboard/list-agents/` - List company agents
-- `POST /api/admin-dashboard/agent-first-login/` - Agent password setup
+- `GET /api/admin-dashboard/user-profiles/` - View company profiles
 
-## Setup Instructions
+### 👨‍💼 Agent APIs
+- `POST /api/admin-dashboard/agent-first-login/` - Setup password
+- `GET /api/human-handoff/agent/sessions/` - View assigned sessions
+- `POST /api/human-handoff/agent/send-message/` - Send message
 
-1. **Create Virtual Environment**
-   ```bash
-   python3 -m venv venv
-   source venv/bin/activate  # On Windows: venv\Scripts\activate
-   ```
+### 💬 Chatbot APIs
+- `POST /api/chatbot/chat/` - Send chat message (now supports attachments!)
+- `POST /api/chatbot/upload/` - Upload files for chat messages (NEW!)
+- `POST /api/chatbot/create-profile/` - Create user profile
+- `GET /api/chatbot/session-status/` - Check session status
 
-2. **Install Dependencies**
-   ```bash
-   pip install -r requirements.txt
-   ```
+### 🔄 Human Handoff APIs
+- `POST /api/human-handoff/escalate/` - Escalate to human
+- `POST /api/human-handoff/assign/` - Assign to agent
+- `GET /api/human-handoff/sessions/` - List escalated sessions
 
-3. **Run Migrations**
-   ```bash
-   python manage.py migrate
-   ```
+## 🧪 Testing
 
-4. **Create SuperUser**
-   ```bash
-   python manage.py createsuperuser --username superadmin --email superadmin@example.com
-   # Set password: admin123456
-   ```
-
-5. **Set SuperAdmin Role**
-   ```bash
-   python manage.py setup_superadmin superadmin
-   ```
-
-6. **Start Development Server**
-   ```bash
-   python manage.py runserver
-   ```
-
-## Testing the API
-
-### 1. Login (Get JWT Token)
+### Quick Test
 ```bash
-curl -X POST http://127.0.0.1:8000/api/auth/login/ \
-  -H "Content-Type: application/json" \
-  -d '{"username": "superadmin", "password": "admin123456"}'
+# Test SuperAdmin login
+python tests/simple_login_test.py
+
+# Test complete system
+python tests/test_complete_system_final.py
+
+# Test company isolation
+python tests/test_company_isolation_complete.py
 ```
 
-Response includes:
-- `access`: JWT access token
-- `refresh`: JWT refresh token  
-- `user`: User details with role
+### Postman Testing
+1. Import `tests/Complete_Chatbot_System_API.postman_collection.json`
+2. Set up environment variables
+3. Follow the testing guide in `docs/STEP_BY_STEP_TESTING_GUIDE.md`
 
-### 2. Create Admin (SuperAdmin only)
-```bash
-curl -X POST http://127.0.0.1:8000/api/auth/create-admin/ \
-  -H "Content-Type: application/json" \
-  -H "Authorization: Bearer YOUR_ACCESS_TOKEN" \
-  -d '{
-    "username": "admin1",
-    "email": "admin1@example.com", 
-    "first_name": "Admin",
-    "last_name": "User",
-    "password": "admin123456",
-    "password_confirm": "admin123456",
-    "role": "ADMIN"
-  }'
+## 🏢 Multi-tenant Example
+
+### Company A (Tesla)
+- Admin: `admin@tesla.com` (company_id: TES001)
+- Agent: `john@tesla.com` (can only see Tesla sessions)
+- Sessions: All prefixed with TES001
+
+### Company B (SpaceX)
+- Admin: `admin@spacex.com` (company_id: SPA001)  
+- Agent: `jane@spacex.com` (can only see SpaceX sessions)
+- Sessions: All prefixed with SPA001
+
+### Isolation Guarantee
+- Tesla admin cannot see SpaceX agents
+- SpaceX agent cannot access Tesla sessions
+- All data queries filtered by company_id
+
+## 📊 Project Structure
+
+```
+├── docs/                          # 📚 All documentation
+├── tests/                         # 🧪 Test scripts and Postman collections
+├── auth_system/                   # ⚙️ Django project settings
+├── authentication/                # 🔐 User authentication app
+├── admin_dashboard/               # 👥 Admin and agent management
+├── chatbot/                       # 💬 Chatbot functionality
+├── human_handoff/                 # 🔄 Human agent handoff
+├── websocket_chat/                # 🔌 WebSocket support (optional)
+├── manage.py                      # 🐍 Django management
+├── requirements.txt               # 📦 Python dependencies
+└── .gitignore                     # 🚫 Git ignore rules
 ```
 
-### 3. Create Chat (Admin only)
-```bash
-curl -X POST http://127.0.0.1:8000/api/auth/create-chat/ \
-  -H "Content-Type: application/json" \
-  -H "Authorization: Bearer ADMIN_ACCESS_TOKEN" \
-  -d '{
-    "title": "Customer Support Chat",
-    "description": "Help customer with billing issue"
-  }'
-```
+## 🚀 Production Deployment
 
-### 4. Assign Agent (Admin only)
-```bash
-curl -X POST http://127.0.0.1:8000/api/auth/assign-agent/ \
-  -H "Content-Type: application/json" \
-  -H "Authorization: Bearer ADMIN_ACCESS_TOKEN" \
-  -d '{
-    "chat_id": 1,
-    "agent_id": 2
-  }'
-```
+See **[Deployment Setup Guide](docs/DEPLOYMENT_SETUP_GUIDE.md)** for:
+- Production settings configuration
+- Database setup (PostgreSQL recommended)
+- Nginx and Gunicorn configuration
+- SSL and security settings
+- Monitoring and maintenance
 
-### 5. View My Chats (Agent only)
-```bash
-curl -X GET http://127.0.0.1:8000/api/auth/my-chats/ \
-  -H "Authorization: Bearer AGENT_ACCESS_TOKEN"
-```
+## 🔧 Development
 
-## Frontend Integration
-
-The login response includes the user's role, allowing immediate redirection:
-
-```javascript
-// Login response
-{
-  "access": "eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9...",
-  "refresh": "eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9...",
-  "user": {
-    "id": 1,
-    "username": "superadmin",
-    "email": "superadmin@example.com",
-    "role": "SUPERADMIN"
-  }
-}
-
-// React redirect logic
-const redirectPath = {
-  'SUPERADMIN': '/super-admin',
-  'ADMIN': '/admin', 
-  'AGENT': '/agent'
-}[user.role];
-
-navigate(redirectPath);
-```
-
-## Environment Variables
-
-Create a `.env` file:
-```
-SECRET_KEY=your-secret-key-here
+### Environment Variables
+Create `.env` file:
+```env
+SECRET_KEY=your-secret-key
 DEBUG=True
-ALLOWED_HOSTS=localhost,127.0.0.1
+DB_NAME=chatbot_system
+DB_USER=your_db_user
+DB_PASSWORD=your_db_password
 ```
 
-## Production Considerations
+### Database Models
+- **User**: Custom user with role and company_id
+- **Agent**: Company-specific agents
+- **ChatSession**: Sessions with company context
+- **UserProfile**: User profiles linked to companies
+- **HumanHandoff**: Escalation management
 
-- Set `DEBUG=False` in production
-- Use a strong `SECRET_KEY`
-- Configure proper `ALLOWED_HOSTS`
-- Use PostgreSQL instead of SQLite
-- Set up proper CORS origins
-- Configure HTTPS
-- Set appropriate JWT token lifetimes
+## 🤝 Contributing
+
+1. Fork the repository
+2. Create feature branch (`git checkout -b feature/amazing-feature`)
+3. Commit changes (`git commit -m 'Add amazing feature'`)
+4. Push to branch (`git push origin feature/amazing-feature`)
+5. Open Pull Request
+
+## 📄 License
+
+This project is licensed under the MIT License - see the LICENSE file for details.
+
+## 📞 Support
+
+- **Documentation**: Check `docs/` directory
+- **Testing**: Use `tests/` directory resources
+- **Issues**: Create GitHub issues for bugs or features
+- **API Reference**: See `docs/QUICK_API_REFERENCE.md`
+
+---
+
+**🚀 Ready to build multi-tenant chatbot systems with complete company isolation!**
